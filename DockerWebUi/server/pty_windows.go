@@ -3,10 +3,8 @@
 package main
 
 import (
-    "io"
     "log"
     "net/http"
-    "os/exec"
     "github.com/gorilla/mux"
     "github.com/gorilla/websocket"
     "github.com/iamacarpet/go-winpty"
@@ -77,8 +75,5 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
         }
     }()
 
-    // Wait for the command to finish
-    if err := wp.Wait(); err != nil {
-        log.Println("Wait error:", err)
-    }
+    // No need to wait for the command, wp.Close() will clean up.
 }
