@@ -138,19 +138,31 @@ func startContainer(w http.ResponseWriter, r *http.Request) {
 }
 
 func stopContainer(w http.ResponseWriter, r *http.Request) {
-    fmt.Println("Stopping container...")
     vars := mux.Vars(r)
     containerID := vars["id"]
 
+    fmt.Printf("Stopping container: %s...\n", containerID)
+
+    // Log command to be executed
     cmd := exec.Command("docker", "stop", containerID)
-    if err := cmd.Run(); err != nil {
-        http.Error(w, "Error stopping container", http.StatusInternalServerError)
-        fmt.Println("Error stopping container:", err)
+    fmt.Printf("Executing command: %v\n", cmd.Args)
+
+    // Capture stdout and stderr
+    var out, stderr bytes.Buffer
+    cmd.Stdout = &out
+    cmd.Stderr = &stderr
+
+    // Run the command
+    err := cmd.Run()
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Error stopping container: %v", stderr.String()), http.StatusInternalServerError)
+        fmt.Printf("Error stopping container %s: %v\n", containerID, err)
         return
     }
 
+    // Log successful stop
     w.WriteHeader(http.StatusNoContent)
-    fmt.Println("Container stopped successfully")
+    fmt.Printf("Container %s stopped successfully. Output: %s\n", containerID, out.String())
 }
 
 func getContainerLogs(w http.ResponseWriter, r *http.Request) {
