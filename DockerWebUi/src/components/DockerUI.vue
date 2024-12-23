@@ -69,6 +69,18 @@ export default defineComponent({
     const serverURL = 'http://localhost:3000';
     const ws = new WebSocket('ws://localhost:3000/ws');
 
+    ws.onopen = () => {
+      console.log('WebSocket connection opened');
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
     ws.onmessage = (event) => {
       // Handle incoming WebSocket messages
       console.log('WebSocket message:', event.data);
