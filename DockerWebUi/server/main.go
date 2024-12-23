@@ -54,10 +54,12 @@ func main() {
 }
 
 func getContainers(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("Fetching containers...")
     cmd := exec.Command("docker", "ps", "-a", "--format", "{{json .}}")
     output, err := cmd.Output()
     if err != nil {
         http.Error(w, "Error fetching containers", http.StatusInternalServerError)
+        fmt.Println("Error fetching containers:", err)
         return
     }
 
@@ -67,6 +69,7 @@ func getContainers(w http.ResponseWriter, r *http.Request) {
         var container Container
         if err := json.Unmarshal([]byte(line), &container); err != nil {
             http.Error(w, "Error parsing container data", http.StatusInternalServerError)
+            fmt.Println("Error parsing container data:", err)
             return
         }
         containers = append(containers, container)
@@ -74,15 +77,18 @@ func getContainers(w http.ResponseWriter, r *http.Request) {
 
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(containers)
+    fmt.Println("Containers fetched successfully")
 }
 
 func createContainer(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("Creating container...")
     var requestBody struct {
         Image string `json:"Image"`
         Name  string `json:"Names"`
     }
     if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
         http.Error(w, "Invalid request body", http.StatusBadRequest)
+        fmt.Println("Invalid request body:", err)
         return
     }
 
@@ -90,40 +96,49 @@ func createContainer(w http.ResponseWriter, r *http.Request) {
     output, err := cmd.Output()
     if err != nil {
         http.Error(w, "Error creating container", http.StatusInternalServerError)
+        fmt.Println("Error creating container:", err)
         return
     }
 
     w.Header().Set("Content-Type", "application/json")
     w.Write(output)
+    fmt.Println("Container created successfully")
 }
 
 func startContainer(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("Starting container...")
     vars := mux.Vars(r)
     containerID := vars["id"]
 
     cmd := exec.Command("docker", "start", containerID)
     if err := cmd.Run(); err != nil {
         http.Error(w, "Error starting container", http.StatusInternalServerError)
+        fmt.Println("Error starting container:", err)
         return
     }
 
     w.WriteHeader(http.StatusNoContent)
+    fmt.Println("Container started successfully")
 }
 
 func stopContainer(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("Stopping container...")
     vars := mux.Vars(r)
     containerID := vars["id"]
 
     cmd := exec.Command("docker", "stop", containerID)
     if err := cmd.Run(); err != nil {
         http.Error(w, "Error stopping container", http.StatusInternalServerError)
+        fmt.Println("Error stopping container:", err)
         return
     }
 
     w.WriteHeader(http.StatusNoContent)
+    fmt.Println("Container stopped successfully")
 }
 
 func getContainerLogs(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("Fetching container logs...")
     vars := mux.Vars(r)
     containerID := vars["id"]
 
@@ -131,11 +146,13 @@ func getContainerLogs(w http.ResponseWriter, r *http.Request) {
     output, err := cmd.Output()
     if err != nil {
         http.Error(w, "Error fetching logs", http.StatusInternalServerError)
+        fmt.Println("Error fetching logs:", err)
         return
     }
 
     w.Header().Set("Content-Type", "text/plain")
     w.Write(output)
+    fmt.Println("Container logs fetched successfully")
 }
 
 func splitLines(data []byte) []string {

@@ -9,6 +9,7 @@ import (
     "net/http"
     "github.com/gorilla/mux"
     "github.com/gorilla/websocket"
+    "fmt"
 )
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -18,14 +19,17 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
     conn, err := upgrader.Upgrade(w, r, nil)
     if err != nil {
         log.Println("Upgrade error:", err)
+        fmt.Println("WebSocket upgrade error:", err)
         return
     }
     defer conn.Close()
 
+    fmt.Println("Starting PTY for container:", containerID)
     cmd := exec.Command("docker", "exec", "-it", containerID, "sh")
     pty, err := pty.Start(cmd)
     if err != nil {
         log.Println("Pty start error:", err)
+        fmt.Println("PTY start error:", err)
         return
     }
     defer pty.Close()
@@ -36,6 +40,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
         for _, logLine := range logs {
             if err := conn.WriteMessage(websocket.TextMessage, []byte(logLine)); err != nil {
                 log.Println("WriteMessage error:", err)
+                fmt.Println("WriteMessage error:", err)
                 mu.Unlock()
                 return
             }
@@ -48,10 +53,12 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
             _, message, err := conn.ReadMessage()
             if err != nil {
                 log.Println("ReadMessage error:", err)
+                fmt.Println("ReadMessage error:", err)
                 break
             }
             if _, err := pty.Write(message); err != nil {
                 log.Println("Pty write error:", err)
+                fmt.Println("PTY write error:", err)
                 break
             }
         }
@@ -63,6 +70,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
             n, err := pty.Read(buf)
             if err != nil {
                 log.Println("Pty read error:", err)
+                fmt.Println("PTY read error:", err)
                 break
             }
             message := string(buf[:n])
@@ -71,6 +79,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
             mu.Unlock()
             if err := conn.WriteMessage(websocket.TextMessage, buf[:n]); err != nil {
                 log.Println("WriteMessage error:", err)
+                fmt.Println("WriteMessage error:", err)
                 break
             }
         }
@@ -78,5 +87,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
     if err := cmd.Wait(); err != nil {
         log.Println("Wait error:", err)
+        fmt.Println("Wait error:", err)
     }
+    fmt.Println("PTY session ended for container:", containerID)
 }
