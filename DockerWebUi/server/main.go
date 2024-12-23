@@ -109,7 +109,7 @@ func createContainer(w http.ResponseWriter, r *http.Request) {
     fmt.Println("Container created successfully")
 }
 
-func startContainer(w http.ResponseWriter, r *http.Request) {
+  func startContainer(w http.ResponseWriter, r *http.Request) {
     vars := mux.Vars(r)
     containerID := vars["id"]
 
@@ -165,6 +165,7 @@ func stopContainer(w http.ResponseWriter, r *http.Request) {
     fmt.Printf("Container %s stopped successfully. Output: %s\n", containerID, out.String())
 }
 
+    // Log successful stop
 func getContainerLogs(w http.ResponseWriter, r *http.Request) {
     fmt.Println("Fetching container logs...")
     vars := mux.Vars(r)

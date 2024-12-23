@@ -19,8 +19,8 @@
     <div v-if="selectedContainer" class="main-content">
       <h1 class="container-title">{{ selectedContainer.Names }}</h1>
       <div class="container-actions">
-        <button @click="sendMessage('start', selectedContainer.ID)" class="action-btn start-btn">START</button>
-        <button @click="sendMessage('stop', selectedContainer.ID)" class="action-btn stop-btn">STOP</button>
+        <button @click="startContainer" class="action-btn start-btn">START</button>
+        <button @click="stopContainer" class="action-btn stop-btn">STOP</button>
         <button @click="fetchContainers" class="action-btn refresh-btn">REFRESH</button>
         <button @click="closeContainer" class="action-btn close-btn">CLOSE</button>
         <button @click="showContainerConsole" class="action-btn console-btn">Console</button>
@@ -115,6 +115,24 @@ export default defineComponent({
       console.log('Sent message:', message);
     };
 
+    const startContainer = () => {
+      console.log('Starting container:', selectedContainer.value);
+      if (selectedContainer.value) {
+        console.log("working");
+        sendMessage('start', selectedContainer.value.ID);
+        axios.post(serverURL + '/api/containers/' + selectedContainer.value.ID + '/start');
+      }
+    };
+
+    const stopContainer = () => {
+      console.log('Stopping container:', selectedContainer.value);
+      if (selectedContainer.value) {
+        console.log("working");
+        sendMessage('stop', selectedContainer.value.ID);
+        axios.post(serverURL + '/api/containers/' + selectedContainer.value.ID + '/stop');
+      }
+    };
+
 
 
     const closeContainer = () => {
@@ -150,6 +168,8 @@ export default defineComponent({
       closeContainer,
       showContainerConsole,
       showContainerLogs,
+      startContainer,
+      stopContainer,
     };
   },
 });
