@@ -6,15 +6,15 @@ import (
     "log"
     "net/http"
     "os/exec"
-
     "github.com/gorilla/mux"
+    "github.com/rs/cors"
 )
 
 type Container struct {
-    ID     string   `json:"Id"`
-    Names  []string `json:"Names"`
-    Image  string   `json:"Image"`
-    Status string   `json:"Status"`
+    ID     string `json:"ID"`
+    Names  string `json:"Names"`
+    Image  string `json:"Image"`
+    Status string `json:"Status"`
 }
 
 func main() {
@@ -23,9 +23,19 @@ func main() {
     r.HandleFunc("/api/containers/create", createContainer).Methods("POST")
     r.HandleFunc("/api/containers/{id}/start", startContainer).Methods("POST")
     r.HandleFunc("/api/containers/{id}/stop", stopContainer).Methods("POST")
+    r.HandleFunc("/api/containers/{id}/logs", getContainerLogs).Methods("GET")
+    r.HandleFunc("/api/containers/{id}/exec", execContainerCommand).Methods("POST")
+
+    c := cors.New(cors.Options{
+        AllowedOrigins: []string{"*"}, // Allow all origins
+        AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
+        AllowedHeaders: []string{"Content-Type"},
+    })
+
+    handler := c.Handler(r)
 
     fmt.Println("Server running at http://localhost:3000")
-    log.Fatal(http.ListenAndServe(":3000", r))
+    log.Fatal(http.ListenAndServe(":3000", handler))
 }
 
 func getContainers(w http.ResponseWriter, r *http.Request) {
@@ -37,9 +47,7 @@ func getContainers(w http.ResponseWriter, r *http.Request) {
     }
 
     var containers []Container
-    // 'output' is a slice of bytes representing multiple lines, one per container
-    // It's best to split that into lines first to unmarshal each container JSON.
-    lines := splitLines(output) 
+    lines := splitLines(output)
     for _, line := range lines {
         var container Container
         if err := json.Unmarshal([]byte(line), &container); err != nil {
@@ -100,7 +108,44 @@ func stopContainer(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusNoContent)
 }
 
-// splitLines splits the command output into lines for parsing each JSON record.
+func getContainerLogs(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    containerID := vars["id"]
+
+    cmd := exec.Command("docker", "logs", containerID)
+    output, err := cmd.Output()
+    if err != nil {
+        http.Error(w, "Error fetching logs", http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "text/plain")
+    w.Write(output)
+}
+
+func execContainerCommand(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    containerID := vars["id"]
+
+    var requestBody struct {
+        Command string `json:"command"`
+    }
+    if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        return
+    }
+
+    cmd := exec.Command("docker", "exec", containerID, "sh", "-c", requestBody.Command)
+    output, err := cmd.Output()
+    if err != nil {
+        http.Error(w, "Error executing command", http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "text/plain")
+    w.Write(output)
+}
+
 func splitLines(data []byte) []string {
     var lines []string
     start := 0
