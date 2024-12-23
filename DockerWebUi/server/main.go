@@ -1,6 +1,7 @@
 package main
 
 import (
+    "bytes"
     "encoding/json"
     "fmt"
     "log"
@@ -34,9 +35,7 @@ var (
 
 func main() {
     // Ensure winpty DLLs are downloaded on Windows (no-op on non-Windows platforms)
-    if ensureWinPTY != nil {
-        ensureWinPTY()
-    }
+    ensureWinPTY()
 
     r := mux.NewRouter()
     r.HandleFunc("/api/containers/json", getContainers).Methods("GET")
@@ -111,19 +110,31 @@ func createContainer(w http.ResponseWriter, r *http.Request) {
 }
 
 func startContainer(w http.ResponseWriter, r *http.Request) {
-    fmt.Println("Starting container...")
     vars := mux.Vars(r)
     containerID := vars["id"]
 
+    fmt.Printf("Starting container: %s...\n", containerID)
+
+    // Log command to be executed
     cmd := exec.Command("docker", "start", containerID)
-    if err := cmd.Run(); err != nil {
-        http.Error(w, "Error starting container", http.StatusInternalServerError)
-        fmt.Println("Error starting container:", err)
+    fmt.Printf("Executing command: %v\n", cmd.Args)
+
+    // Capture stdout and stderr
+    var out, stderr bytes.Buffer
+    cmd.Stdout = &out
+    cmd.Stderr = &stderr
+
+    // Run the command
+    err := cmd.Run()
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Error starting container: %v", stderr.String()), http.StatusInternalServerError)
+        fmt.Printf("Error starting container %s: %v\n", containerID, err)
         return
     }
 
+    // Log successful start
     w.WriteHeader(http.StatusNoContent)
-    fmt.Println("Container started successfully")
+    fmt.Printf("Container %s started successfully. Output: %s\n", containerID, out.String())
 }
 
 func stopContainer(w http.ResponseWriter, r *http.Request) {
