@@ -21,8 +21,8 @@
     <div v-if="selectedContainer" class="flex-1 bg-gray-100 p-4">
       <h1 class="text-2xl font-bold mb-4">{{ selectedContainer.Names }}</h1>
       <div class="flex gap-4">
-        <button @click="connectContainer(selectedContainer.ID)" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500">START</button>
-        <button @click="disconnectContainer(selectedContainer.ID)" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-500">STOP</button>
+        <button @click="sendMessage('start', selectedContainer.ID)" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500">START</button>
+        <button @click="sendMessage('stop', selectedContainer.ID)" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-500">STOP</button>
         <button @click="fetchContainers" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500">REFRESH</button>
         <button @click="closeContainer" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500">CLOSE</button>
         <button @click="showContainerConsole" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500">Console</button>
@@ -69,6 +69,12 @@ export default defineComponent({
     const showConsole = ref(false);
     const showLogs = ref(false);
     const serverURL = 'http://localhost:3000';
+    const ws = new WebSocket('ws://localhost:3000/ws');
+
+    ws.onmessage = (event) => {
+      // Handle incoming WebSocket messages
+      console.log('WebSocket message:', event.data);
+    };
 
     const toggleSidebar = () => {
       sidebarOpen.value = !sidebarOpen.value;
@@ -89,35 +95,13 @@ export default defineComponent({
       }
     };
 
-    const connectContainer = async (containerID: string) => {
-      try {
-        await axios.post(serverURL + `/api/containers/${containerID}/start`);
-        fetchContainers();
-      } catch (error) {
-        console.error('Error starting container:', error);
-      }
-    };
-
-    const disconnectContainer = async (containerID: string) => {
-      try {
-        await axios.post(serverURL + `/api/containers/${containerID}/stop`);
-        fetchContainers();
-      } catch (error) {
-        console.error('Error stopping container:', error);
-      }
-    };
-
-    const addContainer = async () => {
-      try {
-        const response = await axios.post(serverURL + '/api/containers/create', {
-          Image: 'debian:bookworm-slim',
-          name: 'new-container',
-        });
-        await axios.post(serverURL + `/api/containers/${response.data.ID}/start`);
-        fetchContainers();
-      } catch (error) {
-        console.error('Error adding container:', error);
-      }
+    const sendMessage = (action: string, containerID: string, command?: string) => {
+      const message = {
+        action: action,
+        container: containerID,
+        command: command || '',
+      };
+      ws.send(JSON.stringify(message));
     };
 
     const closeContainer = () => {
@@ -149,9 +133,7 @@ export default defineComponent({
       toggleSidebar,
       selectContainer,
       fetchContainers,
-      connectContainer,
-      disconnectContainer,
-      addContainer,
+      sendMessage,
       closeContainer,
       showContainerConsole,
       showContainerLogs,

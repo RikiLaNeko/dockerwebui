@@ -6,7 +6,9 @@ import (
     "log"
     "net/http"
     "os/exec"
+
     "github.com/gorilla/mux"
+    "github.com/gorilla/websocket"
     "github.com/rs/cors"
 )
 
@@ -17,6 +19,14 @@ type Container struct {
     Status string `json:"Status"`
 }
 
+var upgrader = websocket.Upgrader{
+    ReadBufferSize:  1024,
+    WriteBufferSize: 1024,
+    CheckOrigin: func(r *http.Request) bool {
+        return true
+    },
+}
+
 func main() {
     r := mux.NewRouter()
     r.HandleFunc("/api/containers/json", getContainers).Methods("GET")
@@ -24,10 +34,11 @@ func main() {
     r.HandleFunc("/api/containers/{id}/start", startContainer).Methods("POST")
     r.HandleFunc("/api/containers/{id}/stop", stopContainer).Methods("POST")
     r.HandleFunc("/api/containers/{id}/logs", getContainerLogs).Methods("GET")
-    r.HandleFunc("/api/containers/{id}/exec", execContainerCommand).Methods("POST")
+    r.HandleFunc("/api/containers/{id}/console", execContainerCommand).Methods("POST")
+    r.HandleFunc("/ws", handleWebSocket)
 
     c := cors.New(cors.Options{
-        AllowedOrigins: []string{"*"}, // Allow all origins
+        AllowedOrigins: []string{"*"},
         AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
         AllowedHeaders: []string{"Content-Type"},
     })
@@ -159,4 +170,50 @@ func splitLines(data []byte) []string {
         lines = append(lines, string(data[start:]))
     }
     return lines
+}
+
+func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+    conn, err := upgrader.Upgrade(w, r, nil)
+    if err != nil {
+        log.Println("Upgrade error:", err)
+        return
+    }
+    defer conn.Close()
+
+    for {
+        _, message, err := conn.ReadMessage()
+        if err != nil {
+            log.Println("Read error:", err)
+            break
+        }
+
+        var request struct {
+            Action    string `json:"action"`
+            Container string `json:"container"`
+            Command   string `json:"command"`
+        }
+        if err := json.Unmarshal(message, &request); err != nil {
+            log.Println("Unmarshal error:", err)
+            continue
+        }
+
+        var output []byte
+        switch request.Action {
+        case "start":
+            output, err = exec.Command("docker", "start", request.Container).Output()
+        case "stop":
+            output, err = exec.Command("docker", "stop", request.Container).Output()
+        case "exec":
+            output, err = exec.Command("docker", "exec", request.Container, "sh", "-c", request.Command).Output()
+        case "logs":
+            output, err = exec.Command("docker", "logs", request.Container).Output()
+        }
+
+        if err != nil {
+            log.Println("Command error:", err)
+            conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("Error: %v", err)))
+        } else {
+            conn.WriteMessage(websocket.TextMessage, output)
+        }
+    }
 }
