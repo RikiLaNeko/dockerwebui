@@ -7,6 +7,6 @@ git add .
 git commit -m "Update on $(date)"
 
 # Push to the remote repository
-git push master origin
+git push master master
 
 
