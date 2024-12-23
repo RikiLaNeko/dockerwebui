@@ -19,17 +19,12 @@ const (
     agentURL       = "https://github.com/rprichard/winpty/releases/download/latest/winpty-agent.exe"
     dllFilename    = "winpty.dll"
     agentFilename  = "winpty-agent.exe"
-    downloadDir    = "winpty"
+    downloadDir    = "."
 )
 
 // ensureWinPTY downloads winpty DLLs if they are missing
 func ensureWinPTY() {
-    // Create download directory if it doesn't exist
-    if _, err := os.Stat(downloadDir); os.IsNotExist(err) {
-        os.Mkdir(downloadDir, os.ModePerm)
-    }
-
-    // Download winpty.dll and winpty-agent.exe if not present
+    // Download winpty.dll and winpty-agent.exe if not present in the current directory
     downloadFileIfMissing(filepath.Join(downloadDir, dllFilename), dllURL)
     downloadFileIfMissing(filepath.Join(downloadDir, agentFilename), agentURL)
 }
@@ -72,9 +67,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
     defer conn.Close()
 
     fmt.Println("Starting WinPTY for container:", containerID)
-
-    // Set DLL search path to the download directory
-    winpty.SetDllSearchPath(downloadDir)
 
     // Open a WinPTY instance
     wp, err := winpty.Open("docker", "exec -it "+containerID+" cmd")
