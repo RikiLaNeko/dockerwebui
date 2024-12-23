@@ -1,4 +1,4 @@
-<<template>
+<template>
   <div>
     <h1>Add Container</h1>
     <form @submit.prevent="addContainer">
@@ -12,3 +12,22 @@
       </div>
 
 </template>
+
+<script lang="ts">
+export default {
+  data() {
+    return {
+      containerName: '',
+      containerImage: '',
+    };
+  },
+  methods: {
+    addContainer() {
+      this.$store.dispatch('addContainer', {
+        containerName: this.containerName,
+        containerImage: this.containerImage,
+      });
+    },
+  },
+};
+</script>
