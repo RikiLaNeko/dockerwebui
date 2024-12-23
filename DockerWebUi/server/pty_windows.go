@@ -3,13 +3,61 @@
 package main
 
 import (
+    "fmt"
+    "io"
     "log"
     "net/http"
+    "os"
+    "path/filepath"
+
     "github.com/gorilla/mux"
     "github.com/gorilla/websocket"
     "github.com/iamacarpet/go-winpty"
-    "fmt"
 )
+
+const (
+    dllURL         = "https://github.com/rprichard/winpty/releases/download/latest/winpty.dll"
+    agentURL       = "https://github.com/rprichard/winpty/releases/download/latest/winpty-agent.exe"
+    dllFilename    = "winpty.dll"
+    agentFilename  = "winpty-agent.exe"
+    downloadDir    = "winpty"
+)
+
+func main() {
+    // Create download directory if it doesn't exist
+    if _, err := os.Stat(downloadDir); os.IsNotExist(err) {
+        os.Mkdir(downloadDir, os.ModePerm)
+    }
+
+    // Download winpty.dll and winpty-agent.exe if not present
+    downloadFileIfMissing(filepath.Join(downloadDir, dllFilename), dllURL)
+    downloadFileIfMissing(filepath.Join(downloadDir, agentFilename), agentURL)
+
+    // Add your other main logic here
+}
+
+func downloadFileIfMissing(filepath string, url string) {
+    if _, err := os.Stat(filepath); os.IsNotExist(err) {
+        fmt.Println("Downloading", filepath)
+        out, err := os.Create(filepath)
+        if err != nil {
+            log.Fatal(err)
+        }
+        defer out.Close()
+
+        resp, err := http.Get(url)
+        if err != nil {
+            log.Fatal(err)
+        }
+        defer resp.Body.Close()
+
+        _, err = io.Copy(out, resp.Body)
+        if err != nil {
+            log.Fatal(err)
+        }
+        fmt.Println("Downloaded", filepath)
+    }
+}
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
     vars := mux.Vars(r)
@@ -24,6 +72,10 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
     defer conn.Close()
 
     fmt.Println("Starting WinPTY for container:", containerID)
+
+    // Set DLL search path to the download directory
+    winpty.SetDllSearchPath(downloadDir)
+
     // Open a WinPTY instance
     wp, err := winpty.Open("docker", "exec -it "+containerID+" cmd")
     if err != nil {
