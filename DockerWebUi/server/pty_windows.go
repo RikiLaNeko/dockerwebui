@@ -3,12 +3,13 @@
 package main
 
 import (
-    "os/exec"
-    "github.com/iamacarpet/go-winpty"
+    "io"
     "log"
     "net/http"
+    "os/exec"
     "github.com/gorilla/mux"
     "github.com/gorilla/websocket"
+    "github.com/iamacarpet/go-winpty"
 )
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -22,13 +23,13 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
     }
     defer conn.Close()
 
-    cmd := exec.Command("docker", "exec", "-it", containerID, "cmd")
-    pty, err := winpty.Open(cmd)
+    // Open a WinPTY instance
+    wp, err := winpty.Open("docker", "exec -it " + containerID + " cmd")
     if err != nil {
         log.Println("Winpty start error:", err)
         return
     }
-    defer pty.Close()
+    defer wp.Close()
 
     // Send previous logs to the client
     mu.Lock()
@@ -50,7 +51,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
                 log.Println("ReadMessage error:", err)
                 break
             }
-            if _, err := pty.Write(message); err != nil {
+            if _, err := wp.StdIn.Write(message); err != nil {
                 log.Println("Pty write error:", err)
                 break
             }
@@ -60,7 +61,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
     go func() {
         buf := make([]byte, 1024)
         for {
-            n, err := pty.Read(buf)
+            n, err := wp.StdOut.Read(buf)
             if err != nil {
                 log.Println("Pty read error:", err)
                 break
@@ -76,7 +77,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
         }
     }()
 
-    if err := cmd.Wait(); err != nil {
+    // Wait for the command to finish
+    if err := wp.Wait(); err != nil {
         log.Println("Wait error:", err)
     }
 }
