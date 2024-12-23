@@ -1,0 +1,25 @@
+# Utiliser une image Node.js officielle comme image de base
+FROM node:23-alpine as build-stage
+
+# Définir le répertoire de travail dans le conteneur
+WORKDIR /app
+
+# Copier les fichiers package*.json et install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copier tous les fichiers du projet dans le conteneur
+COPY . .
+
+# Construire l'application pour la production
+RUN npm run build
+
+# Utiliser une image Nginx pour servir l'application
+FROM nginx:alpine as production-stage
+COPY --from=build-stage /app/dist /usr/share/nginx/html
+
+# Exposer le port 80
+EXPOSE 80
+
+# Démarrer Nginx
+CMD ["nginx", "-g", "daemon off;"]
