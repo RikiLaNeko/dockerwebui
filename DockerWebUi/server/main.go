@@ -3,16 +3,18 @@ package main
 import (
     "encoding/json"
     "fmt"
+    "io"
     "log"
     "net/http"
     "os/exec"
+    "runtime"
     "sync"
 
     "github.com/creack/pty"
     "github.com/gorilla/mux"
     "github.com/gorilla/websocket"
+    "github.com/iamacarpet/go-winpty"
     "github.com/rs/cors"
-    
 )
 
 type Container struct {
@@ -166,11 +168,25 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
     }
     defer conn.Close()
 
-    cmd := exec.Command("docker", "exec", "-it", containerID, "sh")
-    pty, err := pty.Start(cmd)
-    if err != nil {
-        log.Println("Pty start error:", err)
-        return
+    var pty io.ReadWriteCloser
+    var cmd *exec.Cmd
+
+    if runtime.GOOS == "windows" {
+        // Use winpty for Windows
+        cmd = exec.Command("docker", "exec", "-it", containerID, "cmd")
+        pty, err = winpty.Open(cmd)
+        if err != nil {
+            log.Println("Winpty start error:", err)
+            return
+        }
+    } else {
+        // Use pty for Unix-like systems
+        cmd = exec.Command("docker", "exec", "-it", containerID, "sh")
+        pty, err = pty.Start(cmd)
+        if err != nil {
+            log.Println("Pty start error:", err)
+            return
+        }
     }
     defer pty.Close()
 
