@@ -23,7 +23,7 @@ const (
     downloadDir    = "winpty"
 )
 
-func main() {
+func ensureWinPTY() {
     // Create download directory if it doesn't exist
     if _, err := os.Stat(downloadDir); os.IsNotExist(err) {
         os.Mkdir(downloadDir, os.ModePerm)
@@ -32,8 +32,6 @@ func main() {
     // Download winpty.dll and winpty-agent.exe if not present
     downloadFileIfMissing(filepath.Join(downloadDir, dllFilename), dllURL)
     downloadFileIfMissing(filepath.Join(downloadDir, agentFilename), agentURL)
-
-    // Add your other main logic here
 }
 
 func downloadFileIfMissing(filepath string, url string) {
