@@ -11,6 +11,13 @@
   margin-bottom: 16px;
 }
 
+.terminal-container {
+  flex: 1;
+  background: #1a1a1a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
 .console-output {
   background: #1a1a1a;
   color: #f1f1f1;

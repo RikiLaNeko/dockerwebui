@@ -1,60 +1,78 @@
 <template>
   <div class="console-container">
     <h2 class="console-title">Console Output for {{ containerId }}</h2>
-    <div class="console-output" ref="consoleOutput"></div>
-    <textarea
-      v-model="command"
-      @keyup.enter="executeCommand"
-      placeholder="Enter command"
-      class="command-input"
-    ></textarea>
-    <button @click="executeCommand" class="execute-button">Execute</button>
+    <div ref="terminalContainer" class="terminal-container"></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, defineProps } from 'vue';
+import { ref, onMounted, defineProps, onBeforeUnmount } from 'vue';
+import { Terminal } from 'xterm';
+import { FitAddon } from 'xterm-addon-fit';
+import 'xterm/css/xterm.css';
 
 const props = defineProps<{ containerId: string }>();
 
-const command = ref('');
-const socket = ref<WebSocket | null>(null);
-const consoleOutput = ref<HTMLDivElement | null>(null);
-
-const displayMessage = (message: string) => {
-  const messageElement = document.createElement('div');
-  messageElement.innerText = message;
-  if (consoleOutput.value) {
-    consoleOutput.value.appendChild(messageElement);
-    consoleOutput.value.scrollTop = consoleOutput.value.scrollHeight;
-  }
-};
+const terminalContainer = ref<HTMLDivElement | null>(null);
+let terminal: Terminal | null = null;
+let fitAddon: FitAddon | null = null;
+let socket: WebSocket | null = null;
 
 const connectWebSocket = () => {
-  socket.value = new WebSocket(`ws://localhost:3000/ws/${props.containerId}`);
+  socket = new WebSocket(`ws://localhost:3000/ws/${props.containerId}`);
 
-  socket.value.onmessage = (event) => {
-    displayMessage(event.data);
+  socket.onmessage = (event) => {
+    if (terminal) {
+      terminal.write(event.data);
+    }
   };
 
-  socket.value.onclose = () => {
+  socket.onclose = () => {
     console.error('WebSocket closed');
   };
 
-  socket.value.onerror = (error) => {
+  socket.onerror = (error) => {
     console.error('WebSocket error:', error);
   };
 };
 
-const executeCommand = () => {
-  if (socket.value && socket.value.readyState === WebSocket.OPEN) {
-    socket.value.send(command.value + '\n');
-    command.value = '';
+const initializeTerminal = () => {
+  terminal = new Terminal({
+    cursorBlink: true,
+    fontFamily: 'monospace',
+    theme: {
+      background: '#121212',
+      foreground: '#f1f1f1'
+    }
+  });
+
+  fitAddon = new FitAddon();
+  terminal.loadAddon(fitAddon);
+
+  if (terminalContainer.value) {
+    terminal.open(terminalContainer.value);
+    fitAddon.fit();
   }
+
+  terminal.onData((data) => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(data);
+    }
+  });
 };
 
 onMounted(() => {
+  initializeTerminal();
   connectWebSocket();
+});
+
+onBeforeUnmount(() => {
+  if (terminal) {
+    terminal.dispose();
+  }
+  if (socket) {
+    socket.close();
+  }
 });
 </script>
 
