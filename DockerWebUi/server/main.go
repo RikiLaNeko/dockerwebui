@@ -6,10 +6,11 @@ import (
     "log"
     "net/http"
     "os/exec"
-
+    "github.com/creack/pty"
     "github.com/gorilla/mux"
     "github.com/gorilla/websocket"
     "github.com/rs/cors"
+    
 )
 
 type Container struct {
@@ -34,8 +35,7 @@ func main() {
     r.HandleFunc("/api/containers/{id}/start", startContainer).Methods("POST")
     r.HandleFunc("/api/containers/{id}/stop", stopContainer).Methods("POST")
     r.HandleFunc("/api/containers/{id}/logs", getContainerLogs).Methods("GET")
-    r.HandleFunc("/api/containers/{id}/console", execContainerCommand).Methods("POST")
-    r.HandleFunc("/ws", handleWebSocket)
+    r.HandleFunc("/ws/{id}", handleWebSocket)
 
     c := cors.New(cors.Options{
         AllowedOrigins: []string{"*"},
@@ -75,7 +75,7 @@ func getContainers(w http.ResponseWriter, r *http.Request) {
 func createContainer(w http.ResponseWriter, r *http.Request) {
     var requestBody struct {
         Image string `json:"Image"`
-        Name  string `json:"name"`
+        Name  string `json:"Names"`
     }
     if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
         http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -134,29 +134,6 @@ func getContainerLogs(w http.ResponseWriter, r *http.Request) {
     w.Write(output)
 }
 
-func execContainerCommand(w http.ResponseWriter, r *http.Request) {
-    vars := mux.Vars(r)
-    containerID := vars["id"]
-
-    var requestBody struct {
-        Command string `json:"command"`
-    }
-    if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
-        return
-    }
-
-    cmd := exec.Command("docker", "exec", containerID, "sh", "-c", requestBody.Command)
-    output, err := cmd.Output()
-    if err != nil {
-        http.Error(w, "Error executing command", http.StatusInternalServerError)
-        return
-    }
-
-    w.Header().Set("Content-Type", "text/plain")
-    w.Write(output)
-}
-
 func splitLines(data []byte) []string {
     var lines []string
     start := 0
@@ -173,6 +150,9 @@ func splitLines(data []byte) []string {
 }
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    containerID := vars["id"]
+
     conn, err := upgrader.Upgrade(w, r, nil)
     if err != nil {
         log.Println("Upgrade error:", err)
@@ -180,40 +160,44 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
     }
     defer conn.Close()
 
-    for {
-        _, message, err := conn.ReadMessage()
-        if err != nil {
-            log.Println("Read error:", err)
-            break
-        }
+    cmd := exec.Command("docker", "exec", "-it", containerID, "sh")
+    pty, err := pty.Start(cmd)
+    if err != nil {
+        log.Println("Pty start error:", err)
+        return
+    }
+    defer pty.Close()
 
-        var request struct {
-            Action    string `json:"action"`
-            Container string `json:"container"`
-            Command   string `json:"command"`
+    go func() {
+        for {
+            _, message, err := conn.ReadMessage()
+            if err != nil {
+                log.Println("ReadMessage error:", err)
+                break
+            }
+            if _, err := pty.Write(message); err != nil {
+                log.Println("Pty write error:", err)
+                break
+            }
         }
-        if err := json.Unmarshal(message, &request); err != nil {
-            log.Println("Unmarshal error:", err)
-            continue
-        }
+    }()
 
-        var output []byte
-        switch request.Action {
-        case "start":
-            output, err = exec.Command("docker", "start", request.Container).Output()
-        case "stop":
-            output, err = exec.Command("docker", "stop", request.Container).Output()
-        case "exec":
-            output, err = exec.Command("docker", "exec", request.Container, "sh", "-c", request.Command).Output()
-        case "logs":
-            output, err = exec.Command("docker", "logs", request.Container).Output()
+    go func() {
+        buf := make([]byte, 1024)
+        for {
+            n, err := pty.Read(buf)
+            if err != nil {
+                log.Println("Pty read error:", err)
+                break
+            }
+            if err := conn.WriteMessage(websocket.TextMessage, buf[:n]); err != nil {
+                log.Println("WriteMessage error:", err)
+                break
+            }
         }
+    }()
 
-        if err != nil {
-            log.Println("Command error:", err)
-            conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("Error: %v", err)))
-        } else {
-            conn.WriteMessage(websocket.TextMessage, output)
-        }
+    if err := cmd.Wait(); err != nil {
+        log.Println("Wait error:", err)
     }
 }
