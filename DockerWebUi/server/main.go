@@ -6,6 +6,8 @@ import (
     "log"
     "net/http"
     "os/exec"
+    "sync"
+
     "github.com/creack/pty"
     "github.com/gorilla/mux"
     "github.com/gorilla/websocket"
@@ -20,13 +22,17 @@ type Container struct {
     Status string `json:"Status"`
 }
 
-var upgrader = websocket.Upgrader{
-    ReadBufferSize:  1024,
-    WriteBufferSize: 1024,
-    CheckOrigin: func(r *http.Request) bool {
-        return true
-    },
-}
+var (
+    upgrader = websocket.Upgrader{
+        ReadBufferSize:  1024,
+        WriteBufferSize: 1024,
+        CheckOrigin: func(r *http.Request) bool {
+            return true
+        },
+    }
+    logStorage = make(map[string][]string)
+    mu         sync.Mutex
+)
 
 func main() {
     r := mux.NewRouter()
@@ -168,6 +174,19 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
     }
     defer pty.Close()
 
+    // Send previous logs to the client
+    mu.Lock()
+    if logs, exists := logStorage[containerID]; exists {
+        for _, logLine := range logs {
+            if err := conn.WriteMessage(websocket.TextMessage, []byte(logLine)); err != nil {
+                log.Println("WriteMessage error:", err)
+                mu.Unlock()
+                return
+            }
+        }
+    }
+    mu.Unlock()
+
     go func() {
         for {
             _, message, err := conn.ReadMessage()
@@ -190,6 +209,10 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
                 log.Println("Pty read error:", err)
                 break
             }
+            message := string(buf[:n])
+            mu.Lock()
+            logStorage[containerID] = append(logStorage[containerID], message)
+            mu.Unlock()
             if err := conn.WriteMessage(websocket.TextMessage, buf[:n]); err != nil {
                 log.Println("WriteMessage error:", err)
                 break

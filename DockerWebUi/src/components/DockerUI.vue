@@ -1,32 +1,30 @@
 <template>
-  <div class="flex h-screen">
+  <div class="docker-ui-container">
     <!-- Sidebar -->
-    <div :class="['transition-width duration-300', sidebarOpen ? 'w-64' : 'w-16']" class="bg-gray-800 text-white h-full">
-      <button @click="toggleSidebar" class="m-2 p-2 bg-gray-700 rounded hover:bg-gray-600">
+    <div :class="['sidebar', sidebarOpen ? 'sidebar-open' : 'sidebar-closed']">
+      <button @click="toggleSidebar" class="sidebar-toggle-btn">
         {{ sidebarOpen ? 'Close' : 'Open' }}
       </button>
-      <div v-if="sidebarOpen" class="mt-4">
+      <div v-if="sidebarOpen" class="sidebar-content">
         <ul>
-          <li v-for="container in containers" :key="container.ID" @click="selectContainer(container)" class="p-2 hover:bg-gray-700 cursor-pointer">
+          <li v-for="container in containers" :key="container.ID" @click="selectContainer(container)" class="sidebar-item">
             {{ container.Names }}
           </li>
         </ul>
-        <button @click="addContainer" class="mt-4 p-2 bg-green-600 rounded hover:bg-green-500">
-          + ADD
-        </button>
+        <button @click="addContainer" class="add-container-btn">+ ADD</button>
       </div>
     </div>
 
     <!-- Main content -->
-    <div v-if="selectedContainer" class="flex-1 bg-gray-100 p-4">
-      <h1 class="text-2xl font-bold mb-4">{{ selectedContainer.Names }}</h1>
-      <div class="flex gap-4">
-        <button @click="sendMessage('start', selectedContainer.ID)" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500">START</button>
-        <button @click="sendMessage('stop', selectedContainer.ID)" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-500">STOP</button>
-        <button @click="fetchContainers" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500">REFRESH</button>
-        <button @click="closeContainer" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500">CLOSE</button>
-        <button @click="showContainerConsole" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500">Console</button>
-        <button @click="showContainerLogs" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500">Logs</button>
+    <div v-if="selectedContainer" class="main-content">
+      <h1 class="container-title">{{ selectedContainer.Names }}</h1>
+      <div class="container-actions">
+        <button @click="sendMessage('start', selectedContainer.ID)" class="action-btn start-btn">START</button>
+        <button @click="sendMessage('stop', selectedContainer.ID)" class="action-btn stop-btn">STOP</button>
+        <button @click="fetchContainers" class="action-btn refresh-btn">REFRESH</button>
+        <button @click="closeContainer" class="action-btn close-btn">CLOSE</button>
+        <button @click="showContainerConsole" class="action-btn console-btn">Console</button>
+        <button @click="showContainerLogs" class="action-btn logs-btn">Logs</button>
       </div>
       <div v-if="showConsole" class="console-output">
         <Console :containerId="selectedContainer.ID" />
@@ -37,7 +35,7 @@
     </div>
 
     <!-- Placeholder if no container selected -->
-    <div v-else class="flex-1 flex items-center justify-center text-gray-500">
+    <div v-else class="placeholder">
       <p>Select a container to get started.</p>
     </div>
   </div>
@@ -63,7 +61,7 @@ export default defineComponent({
     Logs,
   },
   setup() {
-    const sidebarOpen = ref(true);
+    const sidebarOpen = ref(false);
     const containers = ref<Container[]>([]);
     const selectedContainer = ref<Container | null>(null);
     const showConsole = ref(false);
@@ -142,11 +140,4 @@ export default defineComponent({
 });
 </script>
 
-<style scoped>
-.console-output, .logs-output {
-  background: #1a1a1a;
-  color: #f1f1f1;
-  padding: 1rem;
-  border-radius: 0.5rem;
-}
-</style>
+<style src="../css/DockerUI.css" scoped></style>

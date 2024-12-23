@@ -1,7 +1,7 @@
 <template>
-  <div>
-    <h2>Logs for {{ containerId }}</h2>
-    <pre>{{ logs }}</pre>
+  <div class="logs-container">
+    <h2 class="logs-title">Logs for {{ containerId }}</h2>
+    <pre class="logs-output">{{ logs }}</pre>
   </div>
 </template>
 
@@ -27,9 +27,4 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
-pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-</style>
+<style src="../css/Logs.css" scoped></style>

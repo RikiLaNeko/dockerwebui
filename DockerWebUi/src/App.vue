@@ -13,3 +13,5 @@ export default defineComponent({
   },
 });
 </script>
+
+<style src="./style.css"></style>

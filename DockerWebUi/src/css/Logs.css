@@ -1,0 +1,19 @@
+.logs-container {
+  background: #1a1a1a;
+  color: #f1f1f1;
+  padding: 16px;
+  border-radius: 8px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.logs-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.logs-output {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}

@@ -1,0 +1,47 @@
+.console-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+}
+
+.console-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.console-output {
+  background: #1a1a1a;
+  color: #f1f1f1;
+  padding: 16px;
+  border-radius: 8px;
+  height: 300px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+
+.command-input {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: #1a1a1a;
+  color: #f1f1f1;
+  margin-bottom: 8px;
+}
+
+.execute-button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background-color: #38a169;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.25s;
+}
+
+.execute-button:hover {
+  background-color: #48bb78;
+}

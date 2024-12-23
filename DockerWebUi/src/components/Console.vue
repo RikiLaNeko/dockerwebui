@@ -1,8 +1,14 @@
 <template>
-  <div>
-    <h2>Console Output for {{ containerId }}</h2>
+  <div class="console-container">
+    <h2 class="console-title">Console Output for {{ containerId }}</h2>
     <div class="console-output" ref="consoleOutput"></div>
-    <textarea v-model="command" @keyup.enter="executeCommand" placeholder="Enter command" class="command-input"></textarea>
+    <textarea
+      v-model="command"
+      @keyup.enter="executeCommand"
+      placeholder="Enter command"
+      class="command-input"
+    ></textarea>
+    <button @click="executeCommand" class="execute-button">Execute</button>
   </div>
 </template>
 
@@ -15,16 +21,20 @@ const command = ref('');
 const socket = ref<WebSocket | null>(null);
 const consoleOutput = ref<HTMLDivElement | null>(null);
 
+const displayMessage = (message: string) => {
+  const messageElement = document.createElement('div');
+  messageElement.innerText = message;
+  if (consoleOutput.value) {
+    consoleOutput.value.appendChild(messageElement);
+    consoleOutput.value.scrollTop = consoleOutput.value.scrollHeight;
+  }
+};
+
 const connectWebSocket = () => {
   socket.value = new WebSocket(`ws://localhost:3000/ws/${props.containerId}`);
 
   socket.value.onmessage = (event) => {
-    const message = document.createElement('div');
-    message.innerText = event.data;
-    if (consoleOutput.value) {
-      consoleOutput.value.appendChild(message);
-      consoleOutput.value.scrollTop = consoleOutput.value.scrollHeight;
-    }
+    displayMessage(event.data);
   };
 
   socket.value.onclose = () => {
@@ -48,29 +58,4 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
-.console-output {
-  background: #1a1a1a;
-  color: #f1f1f1;
-  padding: 1rem;
-  border-radius: 0.5rem;
-  height: 300px;
-  overflow-y: auto;
-  margin-bottom: 1rem;
-}
-
-pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-.command-input {
-  display: block;
-  width: 100%;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  border: 1px solid #ccc;
-  background: #1a1a1a;
-  color: #f1f1f1;
-}
-</style>
+<style src="../css/Console.css" scoped></style>
