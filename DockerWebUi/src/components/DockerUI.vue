@@ -101,6 +101,8 @@ export default defineComponent({
       };
       ws.send(JSON.stringify(message));
     };
+    
+    console.log('Sending message' + JSON.stringify(message));
 
     const closeContainer = () => {
       selectedContainer.value = null;

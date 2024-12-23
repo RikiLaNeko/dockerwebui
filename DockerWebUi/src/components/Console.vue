@@ -20,7 +20,7 @@ let socket: WebSocket | null = null;
 
 const connectWebSocket = () => {
   socket = new WebSocket(`ws://localhost:3000/ws/${props.containerId}`);
-
+  console.log('Connecting to WebSocket' + `ws://localhost:3000/ws/${props.containerId}`);
   socket.onmessage = (event) => {
     if (terminal) {
       terminal.write(event.data);
