@@ -3,91 +3,93 @@
 package main
 
 import (
-    "os/exec"
-    "github.com/creack/pty"
-    "log"
-    "net/http"
-    "github.com/gorilla/mux"
-    "github.com/gorilla/websocket"
-    "fmt"
+	"fmt"
+	"github.com/creack/pty"
+	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
+	"log"
+	"net/http"
+	"os/exec"
 )
 
+func ensureWinPTY() {}
+
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
-    vars := mux.Vars(r)
-    containerID := vars["id"]
+	vars := mux.Vars(r)
+	containerID := vars["id"]
 
-    conn, err := upgrader.Upgrade(w, r, nil)
-    if err != nil {
-        log.Println("Upgrade error:", err)
-        fmt.Println("WebSocket upgrade error:", err)
-        return
-    }
-    defer conn.Close()
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
 
-    fmt.Println("Starting PTY for container:", containerID)
-    cmd := exec.Command("docker", "exec", "-it", containerID, "sh")
-    pty, err := pty.Start(cmd)
-    if err != nil {
-        log.Println("Pty start error:", err)
-        fmt.Println("PTY start error:", err)
-        return
-    }
-    defer pty.Close()
+		fmt.Println("WebSocket upgrade error:", err)
+		return
+	}
+	defer conn.Close()
 
-    // Send previous logs to the client
-    mu.Lock()
-    if logs, exists := logStorage[containerID]; exists {
-        for _, logLine := range logs {
-            if err := conn.WriteMessage(websocket.TextMessage, []byte(logLine)); err != nil {
-                log.Println("WriteMessage error:", err)
-                fmt.Println("WriteMessage error:", err)
-                mu.Unlock()
-                return
-            }
-        }
-    }
-    mu.Unlock()
+	fmt.Println("Starting PTY for container:", containerID)
+	cmd := exec.Command("docker", "exec", "-it", containerID, "sh")
+	pty, err := pty.Start(cmd)
+	if err != nil {
 
-    go func() {
-        for {
-            _, message, err := conn.ReadMessage()
-            if err != nil {
-                log.Println("ReadMessage error:", err)
-                fmt.Println("ReadMessage error:", err)
-                break
-            }
-            if _, err := pty.Write(message); err != nil {
-                log.Println("Pty write error:", err)
-                fmt.Println("PTY write error:", err)
-                break
-            }
-        }
-    }()
+		fmt.Println("PTY start error:", err)
+		return
+	}
+	defer pty.Close()
 
-    go func() {
-        buf := make([]byte, 1024)
-        for {
-            n, err := pty.Read(buf)
-            if err != nil {
-                log.Println("Pty read error:", err)
-                fmt.Println("PTY read error:", err)
-                break
-            }
-            message := string(buf[:n])
-            mu.Lock()
-            logStorage[containerID] = append(logStorage[containerID], message)
-            mu.Unlock()
-            if err := conn.WriteMessage(websocket.TextMessage, buf[:n]); err != nil {
-                log.Println("WriteMessage error:", err)
-                fmt.Println("WriteMessage error:", err)
-                break
-            }
-        }
-    }()
+	// Send previous logs to the client
+	mu.Lock()
+	if logs, exists := logStorage[containerID]; exists {
+		for _, logLine := range logs {
+			if err := conn.WriteMessage(websocket.TextMessage, []byte(logLine)); err != nil {
 
-    if err := cmd.Wait(); err != nil {
-        log.Println("Wait error:", err)
-        fmt.Println("Wait error:", err)
-    }
-    fmt.Println("PTY session ended for container:", containerID)
+				fmt.Println("WriteMessage error:", err)
+				mu.Unlock()
+				return
+			}
+		}
+	}
+	mu.Unlock()
+
+	go func() {
+		for {
+			_, message, err := conn.ReadMessage()
+			if err != nil {
+				log.Println("ReadMessage error:", err)
+				fmt.Println("ReadMessage error:", err)
+				break
+			}
+			if _, err := pty.Write(message); err != nil {
+				log.Println("Pty write error:", err)
+				fmt.Println("PTY write error:", err)
+				break
+			}
+		}
+	}()
+
+	go func() {
+		buf := make([]byte, 1024)
+		for {
+			n, err := pty.Read(buf)
+			if err != nil {
+				log.Println("Pty read error:", err)
+				fmt.Println("PTY read error:", err)
+				break
+			}
+			message := string(buf[:n])
+			mu.Lock()
+			logStorage[containerID] = append(logStorage[containerID], message)
+			mu.Unlock()
+			if err := conn.WriteMessage(websocket.TextMessage, buf[:n]); err != nil {
+				log.Println("WriteMessage error:", err)
+				fmt.Println("WriteMessage error:", err)
+				break
+			}
+		}
+	}()
+
+	if err := cmd.Wait(); err != nil {
+		log.Println("Wait error:", err)
+		fmt.Println("Wait error:", err)
+	}
+	fmt.Println("PTY session ended for container:", containerID)
 }

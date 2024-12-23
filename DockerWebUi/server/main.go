@@ -33,8 +33,10 @@ var (
 )
 
 func main() {
-    // Ensure winpty DLLs are downloaded on Windows
-    ensureWinPTY()
+    // Ensure winpty DLLs are downloaded on Windows (no-op on non-Windows platforms)
+    if ensureWinPTY != nil {
+        ensureWinPTY()
+    }
 
     r := mux.NewRouter()
     r.HandleFunc("/api/containers/json", getContainers).Methods("GET")
@@ -167,7 +169,7 @@ func splitLines(data []byte) []string {
             start = i + 1
         }
     }
-    if start < len(data)) {
+    if start < len(data) {
         lines = append(lines, string(data[start:]))
     }
     return lines
