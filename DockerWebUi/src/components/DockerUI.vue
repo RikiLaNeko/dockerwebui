@@ -11,7 +11,7 @@
             {{ container.Names }}
           </li>
         </ul>
-        <button @click="addContainer" class="add-container-btn">+ ADD</button>
+        <!-- <button @click="addContainer" class="add-container-btn">+ ADD</button> -->
       </div>
     </div>
 
