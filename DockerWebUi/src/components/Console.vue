@@ -59,6 +59,10 @@ const initializeTerminal = () => {
       socket.send(data);
     }
   });
+
+  window.addEventListener('resize', () => {
+    fitAddon.fit();
+  });
 };
 
 onMounted(() => {
@@ -73,6 +77,9 @@ onBeforeUnmount(() => {
   if (socket) {
     socket.close();
   }
+  window.removeEventListener('resize', () => {
+    fitAddon.fit();
+  });
 });
 </script>
 
