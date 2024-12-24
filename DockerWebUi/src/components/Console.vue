@@ -60,8 +60,11 @@ const initializeTerminal = () => {
     }
   });
 
+  // Réajuste le terminal à chaque redimensionnement de la fenêtre
   window.addEventListener('resize', () => {
-    fitAddon.fit();
+    if (fitAddon) {
+      fitAddon.fit();
+    }
   });
 };
 
@@ -78,9 +81,12 @@ onBeforeUnmount(() => {
     socket.close();
   }
   window.removeEventListener('resize', () => {
-    fitAddon.fit();
+    if (fitAddon) {
+      fitAddon.fit();
+    }
   });
 });
 </script>
 
 <style src="../css/Console.css" scoped></style>
+

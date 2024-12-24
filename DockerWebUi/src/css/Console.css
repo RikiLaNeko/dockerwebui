@@ -1,39 +1,63 @@
 .console-container {
   display: flex;
   flex-direction: column;
-  height: 100vw; /* Utilisez toute la hauteur de la fenêtre */
-  width: 100%; /* Utilisez toute la largeur de la fenêtre */
+  height: 80vh; /* Utilisation de 80% de la hauteur de la fenêtre */
+  max-width: 100%; /* Utilisation de la largeur entière du parent, sans dépasser */
+  width: 100%; /* Réduit la largeur à 100% de son parent */
+  margin: 0 auto; /* Centrage horizontal */
   padding: 16px;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow: hidden; /* Empêche tout débordement */
+  background: #1a1a1a;
+  border-radius: 12px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .console-title {
   font-size: 1.5rem;
   font-weight: 700;
+  color: #f1f1f1;
   margin-bottom: 16px;
+  text-align: center; /* Centre le titre */
 }
 
 .terminal-container {
   flex: 1;
   height: 100%;
   width: 100%;
-  background: #1a1a1a;
+  background: #121212;
   border-radius: 8px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
+  overflow: hidden; /* Empêche le débordement horizontal du terminal */
 }
 
-/* Media queries pour ajuster les styles sur différentes tailles d'écran */
+/* Gestion du débordement dans le terminal */
+.terminal-container::-webkit-scrollbar {
+  display: none; /* Cache les barres de défilement */
+}
+
+/* Ajustement sur les petits écrans */
 @media (max-width: 768px) {
+  .console-container {
+    padding: 12px;
+  }
+
+  .console-title {
+    font-size: 1.3rem;
+    margin-bottom: 12px;
+  }
+
+  .terminal-container {
+    border-radius: 6px;
+  }
+}
+
+@media (max-width: 480px) {
   .console-container {
     padding: 8px;
   }
 
   .console-title {
-    font-size: 1.2rem;
+    font-size: 1rem;
     margin-bottom: 8px;
   }
 
@@ -42,13 +66,3 @@
   }
 }
 
-@media (max-width: 480px) {
-  .console-container {
-    padding: 4px;
-  }
-
-  .console-title {
-    font-size: 1rem;
-    margin-bottom: 4px;
-  }
-}
