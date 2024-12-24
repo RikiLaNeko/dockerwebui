@@ -1,9 +1,11 @@
 .console-container {
   display: flex;
   flex-direction: column;
-  height: 100vh; /* Utilisez toute la hauteur de la fenêtre */
+  height: 100vw; /* Utilisez toute la hauteur de la fenêtre */
+  width: 100%; /* Utilisez toute la largeur de la fenêtre */
   padding: 16px;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .console-title {
@@ -14,11 +16,14 @@
 
 .terminal-container {
   flex: 1;
+  height: 100%;
+  width: 100%;
   background: #1a1a1a;
   border-radius: 8px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 /* Media queries pour ajuster les styles sur différentes tailles d'écran */
