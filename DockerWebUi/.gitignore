@@ -25,3 +25,5 @@ dist-ssr
 
 #Tmux
 tmux_created.sh
+
+server/tmp/*
