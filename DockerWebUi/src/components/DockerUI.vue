@@ -18,13 +18,17 @@
     <!-- Main content -->
     <div v-if="selectedContainer" class="main-content">
       <h1 class="container-title">{{ selectedContainer.Names }}</h1>
+      <div class="container-status">
+        Status: {{ selectedContainer.Status }}
+      </div>
       <div class="container-actions">
-        <button @click="startContainer" class="action-btn start-btn">START</button>
-        <button @click="stopContainer" class="action-btn stop-btn">STOP</button>
+        <button v-if="!isContainerRunning(selectedContainer.Status)" @click="startContainer" class="action-btn start-btn">START</button>
+        <button v-if="isContainerRunning(selectedContainer.Status)" @click="stopContainer" class="action-btn stop-btn">STOP</button>
         <button @click="fetchContainers" class="action-btn refresh-btn">REFRESH</button>
         <button @click="closeContainer" class="action-btn close-btn">CLOSE</button>
-        <button @click="showContainerConsole" class="action-btn console-btn">Console</button>
-        <button @click="showContainerLogs" class="action-btn logs-btn">Logs</button>
+        <button v-if="isContainerRunning(selectedContainer.Status)" @click="showContainerConsole" class="action-btn console-btn">Console</button>
+        <button v-if="isContainerRunning(selectedContainer.Status)" @click="showContainerLogs" class="action-btn logs-btn">Logs</button>
+        <button @click="deleteContainer" class="action-btn delete-btn">DELETE</button>
       </div>
       <div v-if="showConsole" class="console-output">
         <Console :containerId="selectedContainer.ID" />
@@ -100,8 +104,27 @@ export default defineComponent({
       try {
         const response = await axios.get(serverURL + '/api/containers/json');
         containers.value = response.data;
+        // Update the status of the selected container
+        if (selectedContainer.value) {
+          const updatedContainer = containers.value.find(c => c.ID === selectedContainer.value?.ID);
+          if (updatedContainer) {
+            selectedContainer.value = updatedContainer;
+          }
+        }
       } catch (error) {
         console.error('Error fetching containers:', error);
+      }
+    };
+
+    const deleteContainer = () => {
+      console.log('Deleting container:', selectedContainer.value);
+      if (selectedContainer.value) {
+        sendMessage('delete', selectedContainer.value.ID);
+        axios.delete(serverURL + '/api/containers/' + selectedContainer.value.ID)
+          .then(() => {
+            selectedContainer.value = null;
+            fetchContainers();  // Fetch containers after deleting
+          });
       }
     };
 
@@ -118,22 +141,20 @@ export default defineComponent({
     const startContainer = () => {
       console.log('Starting container:', selectedContainer.value);
       if (selectedContainer.value) {
-        console.log("working");
         sendMessage('start', selectedContainer.value.ID);
-        axios.post(serverURL + '/api/containers/' + selectedContainer.value.ID + '/start');
+        axios.post(serverURL + '/api/containers/' + selectedContainer.value.ID + '/start')
+          .then(fetchContainers);  // Fetch containers after starting
       }
     };
 
     const stopContainer = () => {
       console.log('Stopping container:', selectedContainer.value);
       if (selectedContainer.value) {
-        console.log("working");
         sendMessage('stop', selectedContainer.value.ID);
-        axios.post(serverURL + '/api/containers/' + selectedContainer.value.ID + '/stop');
+        axios.post(serverURL + '/api/containers/' + selectedContainer.value.ID + '/stop')
+          .then(fetchContainers);  // Fetch containers after stopping
       }
     };
-
-
 
     const closeContainer = () => {
       selectedContainer.value = null;
@@ -149,6 +170,10 @@ export default defineComponent({
     const showContainerLogs = () => {
       showLogs.value = true;
       showConsole.value = false;
+    };
+
+    const isContainerRunning = (status: string) => {
+      return status.toLowerCase().includes('up') || status.toLowerCase().includes('running');
     };
 
     onMounted(() => {
@@ -170,6 +195,7 @@ export default defineComponent({
       showContainerLogs,
       startContainer,
       stopContainer,
+      isContainerRunning,
     };
   },
 });

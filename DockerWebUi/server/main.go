@@ -43,6 +43,7 @@ func main() {
     r.HandleFunc("/api/containers/{id}/start", startContainer).Methods("POST")
     r.HandleFunc("/api/containers/{id}/stop", stopContainer).Methods("POST")
     r.HandleFunc("/api/containers/{id}/logs", getContainerLogs).Methods("GET")
+    r.HandleFunc("/api/containers/{id}/delete", deleteContainer).Methods("DELETE")
     r.HandleFunc("/ws/{id}", handleWebSocket)
 
     c := cors.New(cors.Options{
@@ -165,7 +166,34 @@ func stopContainer(w http.ResponseWriter, r *http.Request) {
     fmt.Printf("Container %s stopped successfully. Output: %s\n", containerID, out.String())
 }
 
-    // Log successful stop
+func deleteContainer(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    containerID := vars["id"]
+
+    fmt.Printf("Deleting container: %s...\n", containerID)
+
+    // Log command to be executed
+    cmd := exec.Command("docker", "rm", containerID)
+    fmt.Printf("Executing command: %v\n", cmd.Args)
+
+    // Capture stdout and stderr
+    var out, stderr bytes.Buffer
+    cmd.Stdout = &out
+    cmd.Stderr = &stderr
+
+    // Run the command
+    err := cmd.Run()
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Error deleting container: %v", stderr.String()), http.StatusInternalServerError)
+        fmt.Printf("Error deleting container %s: %v\n", containerID, err)
+        return
+    }
+
+    // Log successful deletion
+    w.WriteHeader(http.StatusNoContent)
+    fmt.Printf("Container %s deleted successfully. Output: %s\n", containerID, out.String())
+}
+
 func getContainerLogs(w http.ResponseWriter, r *http.Request) {
     fmt.Println("Fetching container logs...")
     vars := mux.Vars(r)

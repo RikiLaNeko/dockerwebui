@@ -30,6 +30,8 @@
   overflow: hidden; /* Empêche le débordement horizontal du terminal */
 }
 
+
+
 /* Gestion du débordement dans le terminal */
 .terminal-container::-webkit-scrollbar {
   display: none; /* Cache les barres de défilement */
