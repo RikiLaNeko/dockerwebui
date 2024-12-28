@@ -15,6 +15,8 @@
   </div>
 </template>
 
+// Todo - Make this page accesible via the route /add-container
+
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
 import axios from 'axios';
