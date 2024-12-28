@@ -138,6 +138,13 @@ export default defineComponent({
       console.log('Sent message:', message);
     };
 
+    // Add a new container , when the user clicks on the + ADD button redirct to the AddContainer page 
+    const addContainer = () => {
+      console.log('Adding a new container');
+      // Redirect to the AddContainer page
+      this.$router.push('/addContainer');
+    };
+
     const startContainer = () => {
       console.log('Starting container:', selectedContainer.value);
       if (selectedContainer.value) {
